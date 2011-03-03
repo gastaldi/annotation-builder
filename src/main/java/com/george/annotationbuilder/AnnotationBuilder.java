@@ -14,14 +14,15 @@ public class AnnotationBuilder<T extends Annotation> {
 
 	private final Map<String, Object> props = new HashMap<String, Object>();
 
-	public static <T> AnnotationBuilder create(Class<T> ann) {
-		return new AnnotationBuilder(ann);
+	public static <T extends Annotation> AnnotationBuilder<T> create(Class<T> ann) {
+		return new AnnotationBuilder<T>(ann);
 	}
 
 	public AnnotationBuilder(Class<T> ann) {
 		this.ann = ann;
 	}
 
+	@SuppressWarnings("unchecked")
 	public <M extends Annotation> M toMock(Class<M> cl) {
 		return (M) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
 				new Class[] { cl }, new NullInvocationHandler());
@@ -47,7 +48,26 @@ public class AnnotationBuilder<T extends Annotation> {
 	private class NullInvocationHandler implements InvocationHandler {
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			currentAnnMethod = method.getName();
-			return method.getDefaultValue();
+			Object defaultValue = method.getDefaultValue();
+			Class<?> returnType = method.getReturnType();
+			if (defaultValue == null &&  returnType.isPrimitive()) {
+				if (returnType == Integer.TYPE) {
+					defaultValue = 0;
+				} else if (returnType == Boolean.TYPE) {
+					defaultValue = false;
+				} else if (returnType == Float.TYPE) {
+					defaultValue = 0.0f;
+				} else if (returnType == Double.TYPE) {
+					defaultValue = 0.0d;
+				} else if (returnType == Short.TYPE) {
+					defaultValue = (short) 0;
+				} else if (returnType == Character.TYPE) {
+					defaultValue = ' ';
+				} else if (returnType == Long.TYPE) {
+					defaultValue = 0L;
+				}
+			}
+			return defaultValue;
 		}
 	}
 
